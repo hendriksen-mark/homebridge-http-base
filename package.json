@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-http-base",
+  "name": "homebridge-http-utils",
   "version": "3.0.0",
   "description": "Base and utils for homebridge-http devices",
   "license": "ISC",
