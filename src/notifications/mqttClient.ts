@@ -35,17 +35,15 @@ export class MQTTClient extends EventEmitter {
   service: Service;
   mqttOptions: IClientOptions;
   log: any;
-  debug: boolean;
 
   subscriptions: Record<string, InternalMQTTSubscription[]>;
   client?: MqttClient;
 
-  constructor(service: Service, options: IClientOptions & MQTTSubscriptionObject, log: any, debug?: boolean) {
+  constructor(service: Service, options: IClientOptions & MQTTSubscriptionObject, log: any) {
     super();
     this.service = service;
     this.mqttOptions = options;
     this.log = log;
-    this.debug = debug || false;
 
     this.subscriptions = {};
     if (options.subscriptions) {
@@ -57,13 +55,13 @@ export class MQTTClient extends EventEmitter {
   }
 
   connect() {
-    this.log('MQTT connecting to broker...');
+    this.log.info('MQTT connecting to broker...');
 
     this.client = mqttClient.connect(this.mqttOptions);
         this.client!.on('connect', this._connected.bind(this));
         this.client!.on('message', this._message.bind(this));
         this.client!.on('error', this._error.bind(this));
-        this.client!.on('close', () => this.log('MQTT client disconnected!'));
+        this.client!.on('close', () => this.log.info('MQTT client disconnected!'));
   }
 
   end(force: boolean, closeCallback: CloseCallback) {
@@ -113,7 +111,7 @@ export class MQTTClient extends EventEmitter {
           if (error) {
             this.log.error(`MQTT error occurred while subscribing to topic ${subscription.topic}: ${error.message}`);
           } else {
-            this.log(`MQTT successfully subscribed to topic '${subscription.topic}. Granted ${JSON.stringify(granted)}'`);
+            this.log.info(`MQTT successfully subscribed to topic '${subscription.topic}. Granted ${JSON.stringify(granted)}'`);
           }
         });
       }
@@ -153,14 +151,14 @@ export class MQTTClient extends EventEmitter {
         this.client!.publish(topic, message, options || {}, callback || ((error?: Error) => {
           if (error) {
             this.log.error(`MQTT error occurred while publishing to topic '${topic}', message '${message}': ${error.message}`);
-          } else if (this.debug) {
+          } else {
             this.log.info(`MQTT successfully published to topic ${topic}`);
           }
         }));
   }
 
   _connected (connack: IConnackPacket) {
-    this.log('MQTT Connected!');
+    this.log.info('MQTT Connected!');
 
     /** @namespace connack.sessionPresent */
     if (!connack.sessionPresent) {
@@ -172,16 +170,16 @@ export class MQTTClient extends EventEmitter {
         // selecting the first will result in the first subscription on a tropic to be responsible for the qos for all other
         // subscriptions on that same topic. Bit weird but I'm not quite sure how to improve that
         const subscription = this.subscriptions[topic][0];
-        this.log('Subscribing to existing topic: ' + topic); // TODO remove
-                this.client!.subscribe(topic, {
-                  qos: subscription.qos,
-                }, (error, granted) => {
-                  if (error) {
-                    this.log.error(`MQTT error occurred while subscribing to topic ${topic}: ${error.message}`);
-                  } else {
-                    this.log(`MQTT successfully subscribed to topic '${topic}. Granted ${JSON.stringify(granted)}'`);
-                  }
-                })
+        this.log.debug('Subscribing to existing topic: ' + topic); // TODO remove
+        this.client!.subscribe(topic, {
+          qos: subscription.qos,
+        }, (error, granted) => {
+          if (error) {
+            this.log.error(`MQTT error occurred while subscribing to topic ${topic}: ${error.message}`);
+          } else {
+            this.log.info(`MQTT successfully subscribed to topic '${topic}. Granted ${JSON.stringify(granted)}'`);
+          }
+        });
       }
     }
 
@@ -230,16 +228,12 @@ this.client!.end();
             value = newValue;
           }
 
-          if (this.debug) {
-            this.log(`MQTT updating characteristic ${subscription.characteristic} to ${value}`);
-          }
-                    this.service.getCharacteristic(subscription.characteristic)!.updateValue(value);
+          this.log.debug(`MQTT updating characteristic ${subscription.characteristic} to ${value}`);
+          this.service.getCharacteristic(subscription.characteristic)!.updateValue(value);
         }), subscription.characteristic);
       } else {
-        if (this.debug) {
-          this.log(`MQTT updating characteristic ${subscription.characteristic} to ${value}`);
-        }
-                this.service.getCharacteristic(subscription.characteristic)!.updateValue(value);
+        this.log.debug(`MQTT updating characteristic ${subscription.characteristic} to ${value}`);
+        this.service.getCharacteristic(subscription.characteristic)!.updateValue(value);
       }
     });
   }
