@@ -6,8 +6,12 @@ describe('PullTimer', () => {
     let value: number | undefined;
     beforeAll(() => {
 
-      pullTimer = new PullTimer(console.log, 200, callback => callback(null, value? value + 1: 1),
-        v => value = v);
+      pullTimer = new PullTimer(
+        console.log,
+        200,
+        (callback: (err: any, result: number) => void) => callback(null, value ? value + 1 : 1),
+        (v: number) => value = v
+      );
       pullTimer.start();
     });
     afterAll(() => {
@@ -31,8 +35,12 @@ describe('PullTimer', () => {
     let pullTimer: PullTimer;
     let value: number | undefined;
     beforeAll(() => {
-      pullTimer = new PullTimer(console.log, 200, callback => callback(null, value? value + 1: 1),
-        v => value = v);
+      pullTimer = new PullTimer(
+        console.log,
+        200,
+        (callback: (err: any, result: number) => void) => callback(null, value ? value + 1 : 1),
+        (v: number) => value = v
+      );
       pullTimer.start();
     });
     afterAll(() => {
