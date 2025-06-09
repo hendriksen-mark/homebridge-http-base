@@ -1,16 +1,16 @@
 {
   "name": "homebridge-http-base",
-  "version": "2.1.14",
+  "version": "3.0.0",
   "description": "Base and utils for homebridge-http devices",
   "license": "ISC",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Supereg/homebridge-http-switch"
+    "url": "https://github.com/hendriksen-mark/homebridge-http-utils"
   },
   "bugs": {
-    "url": "https://github.com/Supereg/homebridge-http-switch/issues"
+    "url": "https://github.com/hendriksen-mark/homebridge-http-utils/issues"
   },
   "publishConfig": {
     "access": "public"
