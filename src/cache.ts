@@ -20,6 +20,9 @@ export class Cache {
   }
 
   shouldQuery(): boolean {
+    if (this.cacheTime === 0) {
+      return true;
+    }
     if (this.isInfinite()) {
       return false;
     }
