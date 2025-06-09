@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "rimraf ./dist && tsc",
-    "clean": "./node_modules/rimraf/bin.js dist",
+    "clean": "rimraf dist",
     "prepublishOnly": "npm run build",
     "postpublish": "npm run clean",
     "test": "jest",
