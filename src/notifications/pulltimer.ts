@@ -1,55 +1,56 @@
 import * as utils from '../utils';
-import Timeout = NodeJS.Timeout;
-import {CharacteristicGetCallback} from "hap-nodejs";
+import { setTimeout, clearTimeout } from 'timers';
 
 export class PullTimer {
 
-    log: any;
-    interval: number;
-    handler: (cb: CharacteristicGetCallback) => void;
-    successHandler: (value: any) => void;
+  log: any;
+  interval: number;
+  handler: any;
+  successHandler: any;
 
-    private timeout?: Timeout;
+  private timeout?: ReturnType<typeof setTimeout>;
 
-    constructor(log: any, interval: number, handler: (cb: CharacteristicGetCallback) => void, successHandler: (value: any) => void) {
-        this.log = log;
-        this.interval = interval;
-        this.handler = handler;
-        this.successHandler = successHandler;
+  constructor(log: any, interval: number, handler: any, successHandler: any) {
+    this.log = log;
+    this.interval = interval;
+    this.handler = handler;
+    this.successHandler = successHandler;
+  }
+
+  start() {
+    if (!this.timeout) {
+      this.timeout = setTimeout(this.handleTimer.bind(this), this.interval);
+    } else {
+      this.timeout.refresh();
+    }
+  }
+
+  resetTimer() {
+    if (!this.timeout) {
+      return;
     }
 
-    start() {
-        if (!this.timeout) {
-            this.timeout = setTimeout(this.handleTimer.bind(this), this.interval);
-        } else {
-            this.timeout.refresh();
-        }
+    this.timeout.refresh();
+  }
+
+  stop() {
+    if (this.timeout) {
+      clearTimeout(this.timeout);
     }
 
-    resetTimer() {
-        if (!this.timeout)
-            return;
+    this.timeout = undefined;
+  }
 
-        this.timeout.refresh();
-    }
+  private handleTimer() {
+    this.handler(utils.once((error: Error | null, value?: any) => {
+      if (error) {
+        this.log('Error occurred while pulling update from switch: ' + error.message);
+      } else {
+        this.successHandler(value);
+      }
 
-    stop() {
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-        }
-
-        this.timeout = undefined;
-    }
-
-    private handleTimer() {
-        this.handler(utils.once((error: Error | null, value?: any) => {
-            if (error)
-                this.log("Error occurred while pulling update from switch: " + error.message);
-            else
-                this.successHandler(value);
-
-            this.resetTimer();
-        }));
-    }
+      this.resetTimer();
+    }));
+  }
 
 }

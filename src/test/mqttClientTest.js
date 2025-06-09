@@ -2,11 +2,11 @@
 This file has a basic structure to test the mqtt client.
 However is currently not automated.
  */
-return;
+//return;
 
-const Logger = require("./logger").Logger;
+import { Logger } from "./logger.js";
 
-const MQTTClient = require("../notifications/mqttClient");
+import MQTTClient from "../notifications/mqttClient.js";
 const client = new MQTTClient({
     testCharacteristic: function() {
         return true;
@@ -17,7 +17,7 @@ const client = new MQTTClient({
                 return true;
             },
             updateValue: function(newValue) {
-                console.log("new value " + newValue);
+                Logger.info("new value " + newValue);
             }
         }
     }

@@ -1,15 +1,20 @@
 'use strict';
 
-const chalk = require('chalk');
-const util = require('util');
+import chalk from 'chalk';
+import util from 'util';
 
-module.exports = {
-    Logger: Logger,
-    setDebugEnabled: setDebugEnabled,
-    setTimestampEnabled: setTimestampEnabled,
-    forceColor: forceColor,
-    _system: new Logger() // system logger, for internal use only
-};
+// Ensure 'console' is defined (for environments where it might be missing)
+if (typeof console === 'undefined') {
+    globalThis.console = {
+        log: function() {},
+        error: function() {},
+        warn: function() {},
+        info: function() {}
+    };
+}
+
+export { Logger, setDebugEnabled, setTimestampEnabled, forceColor };
+export const _system = new Logger(); // system logger, for internal use only
 
 let DEBUG_ENABLED = false;
 let TIMESTAMP_ENABLED = true;
@@ -41,38 +46,38 @@ function Logger(prefix) {
     this.prefix = prefix;
 }
 
-Logger.prototype.debug = function(msg) {
+Logger.prototype.debug = function() {
     if (DEBUG_ENABLED)
         this.log.apply(this, ['debug'].concat(Array.prototype.slice.call(arguments)));
 };
 
-Logger.prototype.info = function(msg) {
+Logger.prototype.info = function() {
     this.log.apply(this, ['info'].concat(Array.prototype.slice.call(arguments)));
 };
 
-Logger.prototype.warn = function(msg) {
+Logger.prototype.warn = function() {
     this.log.apply(this, ['warn'].concat(Array.prototype.slice.call(arguments)));
 };
 
-Logger.prototype.error = function(msg) {
+Logger.prototype.error = function() {
     this.log.apply(this, ['error'].concat(Array.prototype.slice.call(arguments)));
 };
 
 Logger.prototype.log = function(level, msg) {
 
     msg = util.format.apply(util, Array.prototype.slice.call(arguments, 1));
-    let func = console.log;
+    let func = globalThis.console.log;
 
     if (level === 'debug') {
         msg = chalk.gray(msg);
     }
     else if (level === 'warn') {
         msg = chalk.yellow(msg);
-        func = console.error;
+        func = globalThis.console.error;
     }
     else if (level === 'error') {
         msg = chalk.bold.red(msg);
-        func = console.error;
+        func = globalThis.console.error;
     }
 
     // prepend prefix if applicable

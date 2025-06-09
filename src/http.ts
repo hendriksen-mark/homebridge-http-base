@@ -1,27 +1,27 @@
-import {Credentials, UrlObject} from "./configparser";
-import async = require("async");
-import request = require("request");
-import {AuthOptions, RequestCallback, Response} from "request";
-import {AsyncFunction} from "async";
+import { UrlObject } from './configparser';
+import async = require('async');
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import {AsyncFunction} from 'async';
+import { setTimeout } from 'timers';
 
 const delayPattern = /^delay\(\d+\)*$/;
 const numberPattern = /\d+/;
 
 export class ExecutionStrategy {
-    static PARALLEL = async.parallel;
-    static SERIES = async.series;
+  static PARALLEL = async.parallel;
+  static SERIES = async.series;
 
-    static get(name: string) {
-        name = name.toUpperCase();
-        switch (name) {
-            case "PARALLEL":
-                return this.PARALLEL;
-            case "SERIES":
-                return this.SERIES;
-            default:
-                return null;
-        }
+  static get(name: string) {
+    name = name.toUpperCase();
+    switch (name) {
+      case 'PARALLEL':
+        return this.PARALLEL;
+      case 'SERIES':
+        return this.SERIES;
+      default:
+        return null;
     }
+  }
 
 }
 
@@ -30,7 +30,7 @@ export type ErrorResponseObject = {
 }
 
 export type ResponseObject = {
-    response: Response,
+    response: AxiosResponse,
     body: string
 }
 
@@ -39,129 +39,125 @@ export type BodyReplacer = {
     replacer: string,
 }
 
-let multipleUrlExecutionStrategy = ExecutionStrategy.PARALLEL;
+let multipleUrlExecutionStrategy: any = ExecutionStrategy.PARALLEL;
 
 export function setMultipleUrlExecutionStrategy(strategyString: string) {
-    const strategy = ExecutionStrategy.get(strategyString);
+  const strategy = ExecutionStrategy.get(strategyString);
 
-    if (strategy) {
-        multipleUrlExecutionStrategy = strategy;
-        return true;
-    }
-    return false;
+  if (strategy) {
+    multipleUrlExecutionStrategy = strategy;
+    return true;
+  }
+  return false;
 }
 
 export function isHttpSuccessCode(statusCode: number) {
-    return Math.floor(statusCode / 100) === 2;
+  return Math.floor(statusCode / 100) === 2;
 }
 
 export function isHttpRedirectCode(statusCode: number) {
-    return Math.floor(statusCode / 100) === 3;
+  return Math.floor(statusCode / 100) === 3;
 }
 
-export function httpRequest(urlObject: UrlObject, callback: RequestCallback, ...bodyReplacer: BodyReplacer[]) {
-    let url = urlObject.url;
-    let body = urlObject.body;
-    let auth: AuthOptions | undefined = undefined;
+export function httpRequest(urlObject: UrlObject, ...bodyReplacer: BodyReplacer[]) {
+  let url = urlObject.url;
+  let body = urlObject.body;
+  let auth: { username: string, password: string } | undefined = undefined;
 
-    if (urlObject.auth && urlObject.auth.username && urlObject.auth.password) {
-        auth = {
-            username: urlObject.auth.username,
-            password: urlObject.auth.password
-        };
+  if (urlObject.auth && urlObject.auth.username && urlObject.auth.password) {
+    auth = {
+      username: urlObject.auth.username,
+      password: urlObject.auth.password,
+    };
+  }
 
-        if (typeof urlObject.auth.sendImmediately !== "undefined")
-            auth.sendImmediately = urlObject.auth.sendImmediately;
+  bodyReplacer.forEach(replacer => {
+    url = url.replace(replacer.searchValue, replacer.replacer);
+    if (body) {
+      body = body.replace(replacer.searchValue, replacer.replacer);
+    }
+  });
+
+  const axiosOptions: AxiosRequestConfig = {
+    url,
+    method: urlObject.method || 'GET',
+    headers: urlObject.headers,
+    auth: auth,
+    timeout: urlObject.requestTimeout || 20000,
+    data: body,
+  };
+
+  return axios(axiosOptions);
+}
+
+export function multipleHttpRequests(urlObjectArray: UrlObject[]) {
+  if (urlObjectArray.length === 0) {
+    throw new Error('Empty urlObject array');
+  }
+
+  const taskArray: AsyncFunction<AxiosResponse, Error>[] = []; //Array<AsyncFunction<T, E>
+  const executionCounter = [];
+
+  for (let i = 0; i < urlObjectArray.length; i++) {
+    const urlObject = urlObjectArray[i];
+
+    if (executionCounter[i] === undefined) {
+      executionCounter[i] = urlObject.repeat;
     }
 
-    bodyReplacer.forEach(replacer => {
-        url = url.replace(replacer.searchValue, replacer.replacer);
-        if (body) {
-            body = body.replace(replacer.searchValue, replacer.replacer);
+    taskArray.push((callback: () => void, delayed?: boolean) => {
+      if (urlObject.url.startsWith('delay') && delayPattern.test(urlObject.url)) {
+        if (multipleUrlExecutionStrategy !== ExecutionStrategy.SERIES) {
+          // Delay method specified but execution is unaffected because of unsuitable execution strategy.
+          callback();
+          return;
         }
+
+        const delay = parseInt(urlObject.url.match(numberPattern)![0]);
+
+        // execute callback from async framework => finish urlObject
+        setTimeout(() => callback(), delay);
+        return;
+      }
+
+      if (!delayed && urlObject.delayBeforeExecution > 0) {
+        const self = arguments.callee;
+        // execute the current method a second time though delayed=true
+        setTimeout(() => self(callback, true), urlObject.delayBeforeExecution);
+        return;
+      }
+
+      httpRequest(urlObject);
     });
 
-    request(
-        {
-            url: url,
-            body: body,
-            method: urlObject.method || "GET",
-            headers: urlObject.headers,
-            auth: auth,
-            strictSSL: urlObject.strictSSL,
-            timeout: urlObject.requestTimeout || 20000,
-        },
-        (error: any, response: Response, body: any) => {
-            callback(error, response, body);
-        }
-    )
-}
+    executionCounter[i]--;
+    if (executionCounter[i] > 0) {
+      i--;
+    } // repeat current urlObject
+  }
 
-export function multipleHttpRequests(urlObjectArray: UrlObject[], callback: (result: (ErrorResponseObject | ResponseObject)[]) => void) {
-    if (urlObjectArray.length === 0)
-        throw new Error("Empty urlObject array");
+  // (err?: E | null, results?: Array<T | undefined>): void;
+  // Array<(callback: (err: null, result: {error?: E, value?: T})
 
-    const taskArray: AsyncFunction<Response, Error>[] = []; //Array<AsyncFunction<T, E>
-    const executionCounter = [];
+  // result: export interface AsyncResultArrayCallback<T, E = Error> { (err?: E | null, results?: Array<T | undefined>): void; }
+  multipleUrlExecutionStrategy(async.reflectAll(taskArray), (error: Error | null | undefined, results?: any) => {
+    const callbackArray: (ErrorResponseObject | ResponseObject)[] = [];
 
-    for (let i = 0; i < urlObjectArray.length; i++) {
-        const urlObject = urlObjectArray[i];
+    for (let i = 0; i < results.length; i++) {
+      const element = results[i];
 
-        if (executionCounter[i] === undefined)
-            executionCounter[i] = urlObject.repeat;
-
-        taskArray.push((callback: (error?: Error, response?: Response, body?: any) => void, delayed?: boolean) => {
-            if (urlObject.url.startsWith("delay") && delayPattern.test(urlObject.url)) {
-                if (multipleUrlExecutionStrategy !== ExecutionStrategy.SERIES) {
-                    console.warn("There was a 'delay' method specified but execution is unaffected because of unsuitable execution strategy!");
-                    callback();
-                    return;
-                }
-
-                const delay = parseInt(urlObject.url.match(numberPattern)![0]);
-
-                // execute callback from async framework => finish urlObject
-                setTimeout(() => callback(), delay);
-                return;
-            }
-
-            if (!delayed && urlObject.delayBeforeExecution > 0) {
-                const self = arguments.callee;
-                // execute the current method a second time though delayed=true
-                setTimeout(() => self(callback, true), urlObject.delayBeforeExecution);
-                return;
-            }
-
-            httpRequest(urlObject, callback);
+      if (element.error) {
+        callbackArray.push({
+          error: element.error,
         });
-
-        executionCounter[i]--;
-        if (executionCounter[i] > 0)
-            i--; // repeat current urlObject
+      } else if (element.value) {
+        callbackArray.push({
+          response: element.value[0],
+          body: element.value[1],
+        });
+      }
     }
 
-    // (err?: E | null, results?: Array<T | undefined>): void;
-    // Array<(callback: (err: null, result: {error?: E, value?: T})
-
-    // result: export interface AsyncResultArrayCallback<T, E = Error> { (err?: E | null, results?: Array<T | undefined>): void; }
-    multipleUrlExecutionStrategy(async.reflectAll(taskArray), (error: Error | null | undefined, results?: any) => {
-        const callbackArray: (ErrorResponseObject | ResponseObject)[] = [];
-
-        for (let i = 0; i < results.length; i++) {
-            const element = results[i];
-
-            if (element.error) {
-                callbackArray.push({
-                    error: element.error
-                });
-            } else if (element.value) {
-                callbackArray.push({
-                    response: element.value[0],
-                    body: element.value[1]
-                });
-            }
-        }
-
-        callback(callbackArray);
-    });
+    return callbackArray;
+  });
 }

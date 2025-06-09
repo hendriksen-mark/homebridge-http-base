@@ -1,7 +1,7 @@
 import * as http from './http';
 
-describe("http client", function () {
-    it('empty test', function () {
+describe('http client', () => {
+  it('empty test', () => {
 
-    });
+  });
 });
