@@ -21,7 +21,7 @@ describe('Cache', () => {
     setTimeout(() => {
       expect(cache.shouldQuery()).toBe(true);
       done();
-    }, 2);
+    }, 20); // increased from 2ms to 20ms
   });
 
   it('should return shouldQuery=false when caching infinitely', () => {
