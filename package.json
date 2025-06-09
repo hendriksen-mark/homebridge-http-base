@@ -16,7 +16,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rimraf ./dist && tsc",
+    "build": "rimraf ./dist && tsc && npm link",
     "clean": "rimraf dist",
     "prepublishOnly": "npm run build",
     "postpublish": "npm run clean",
