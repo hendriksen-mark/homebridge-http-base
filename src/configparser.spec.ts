@@ -1,4 +1,5 @@
 import * as configParser from './configparser';
+import { expect, it, describe } from '@jest/globals';
 
 describe('Config Parser', () => {
   describe('URL parser', () => {
@@ -211,7 +212,7 @@ describe('Config Parser', () => {
 
     it('should parse simple set topic', () => {
       const topic = 'command/device/Power';
-      const setTopic = configParser.parseMQTTSetTopicProperty(topic);
+      const setTopic = configParser.parseMQTTSetTopicProperty(topic) as { topic: string };
       expect(setTopic.topic).toEqual(topic);
     });
     it('should reject illegal data type', () => {
@@ -225,7 +226,7 @@ describe('Config Parser', () => {
 
     it('should parse simple array of set topics', () => {
       const topics = ['command/device/Power1', 'command/device/Power2'];
-      const setTopics = configParser.parseMultipleMQTTSetTopicsProperty(topics);
+      const setTopics = configParser.parseMultipleMQTTSetTopicsProperty(topics) as Array<{ topic: string }>;
       expect(setTopics.constructor).toEqual(Array);
       expect(setTopics[0].topic).toEqual(topics[0]);
       expect(setTopics[1].topic).toEqual(topics[1]);

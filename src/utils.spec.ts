@@ -1,5 +1,6 @@
 import {utils} from './index';
 import {Characteristic, Service} from 'hap-nodejs';
+import { expect, beforeAll, it, describe } from '@jest/globals';
 
 describe('utils', () => {
   describe('pattern', () => {
