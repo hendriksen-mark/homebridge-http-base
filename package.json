@@ -1,6 +1,6 @@
 {
   "name": "homebridge-http-utils",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Base and utils for homebridge-http devices",
   "license": "ISC",
   "main": "dist/index.js",
