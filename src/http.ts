@@ -3,6 +3,8 @@ import async = require('async');
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import {AsyncFunction} from 'async';
 import { setTimeout } from 'timers';
+import * as http from 'http';
+import * as ip from 'ip';
 
 const delayPattern = /^delay\(\d+\)*$/;
 const numberPattern = /\d+/;
@@ -160,4 +162,20 @@ export function multipleHttpRequests(urlObjectArray: UrlObject[]) {
 
     return callbackArray;
   });
+}
+
+/**
+ * Creates an HTTP server using Node's http.createServer.
+ * @param requestListener The request handler function (request, response) => void
+ * @returns http.Server instance
+ */
+export function createHttpServer(requestListener: (req: http.IncomingMessage, res: http.ServerResponse) => void): http.Server {
+  return http.createServer(requestListener);
+}
+
+/**
+ * Returns the local IP address using the 'ip' package.
+ */
+export function getLocalIpAddress(): string {
+  return ip.address();
 }
